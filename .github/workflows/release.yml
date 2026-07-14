@@ -1,0 +1,68 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: shortforge-linux
+            asset_name: shortforge-linux-${{ github.ref_name }}
+          - os: windows-latest
+            artifact_name: shortforge-windows.exe
+            asset_name: shortforge-windows-${{ github.ref_name }}.exe
+          - os: macos-latest
+            artifact_name: shortforge-macos
+            asset_name: shortforge-macos-${{ github.ref_name }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller --name ${{ matrix.artifact_name }} --onefile --windowed --collect-binaries imageio_ffmpeg main.py
+
+    - name: Rename and Zip artifact (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        # PyInstaller creates a .app directory on macOS. GitHub releases need files.
+        cd dist
+        mv ${{ matrix.artifact_name }}.app ${{ matrix.asset_name }}.app
+        zip -r ${{ matrix.asset_name }}.zip ${{ matrix.asset_name }}.app
+
+    - name: Rename artifact (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        mv dist/${{ matrix.artifact_name }} dist/${{ matrix.asset_name }}
+
+    - name: Rename artifact (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        Rename-Item -Path dist\${{ matrix.artifact_name }} -NewName dist\${{ matrix.asset_name }}
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          dist/${{ matrix.asset_name }}
+          dist/${{ matrix.asset_name }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
