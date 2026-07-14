@@ -30,21 +30,29 @@ jobs:
             asset: shortforge-macos-${{ github.ref_name }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          pip install -r requirements.txt pyinstaller
 
-      - name: Build executable
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          pyinstaller --onefile --windowed `
+            --name "${{ matrix.executable }}" `
+            --collect-binaries imageio_ffmpeg `
+            main.py
+
+      - name: Build (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
         run: |
           pyinstaller \
             --onefile \
@@ -52,25 +60,40 @@ jobs:
             --name "${{ matrix.executable }}" \
             --collect-binaries imageio_ffmpeg \
             main.py
-        shell: bash
 
-      - name: Rename artifact (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          mv "dist/${{ matrix.executable }}" "dist/${{ matrix.asset }}"
-
-      - name: Rename artifact (Windows)
+      - name: Prepare asset (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Rename-Item `
-            -Path "dist\${{ matrix.executable }}" `
-            -NewName "${{ matrix.asset }}"
+          Copy-Item `
+            "dist\${{ matrix.executable }}" `
+            "dist\${{ matrix.asset }}"
 
-      - name: Upload release asset
+      - name: Prepare asset (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          cp "dist/${{ matrix.executable }}" "dist/${{ matrix.asset }}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+
+  release:
+    name: Publish Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/${{ matrix.asset }}
+          files: release/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
