@@ -1,0 +1,18 @@
+APP_NAME = "ShortForge"
+
+WINDOW_WIDTH = 1400
+WINDOW_HEIGHT = 850
+
+MIN_WINDOW_WIDTH = 1100
+MIN_WINDOW_HEIGHT = 700
+
+BACKGROUND_MODES = [
+    "Blur",
+    "Black",
+]
+
+OUTPUT_RESOLUTIONS = [
+    "720 × 1280",
+    "1080 × 1920",
+    "1440 × 2560",
+]

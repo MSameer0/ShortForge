@@ -22,6 +22,7 @@ class ProjectSettings(QObject):
     trimChanged = Signal(int, int)  # start_ms, end_ms
     textLayersChanged = Signal()
     blurChanged = Signal(bool, int)  # enabled, intensity
+    exportSettingsChanged = Signal(int, int, int)  # w, h, fps
 
     def __init__(self):
         super().__init__()
@@ -33,6 +34,10 @@ class ProjectSettings(QObject):
 
         self.blur_background = True
         self.blur_intensity = 30
+
+        self.export_width = 1080
+        self.export_height = 1920
+        self.export_fps = 30
 
         self.text_layers: list[TextLayer] = []
 
@@ -57,6 +62,13 @@ class ProjectSettings(QObject):
         self.blur_background = enabled
         self.blur_intensity = intensity
         self.blurChanged.emit(enabled, intensity)
+        self.settingsChanged.emit()
+
+    def set_export_settings(self, w: int, h: int, fps: int):
+        self.export_width = w
+        self.export_height = h
+        self.export_fps = fps
+        self.exportSettingsChanged.emit(w, h, fps)
         self.settingsChanged.emit()
 
     def add_text_layer(self, layer: TextLayer):

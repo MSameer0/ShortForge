@@ -23,7 +23,7 @@ def _divider():
     line = QFrame()
     line.setFrameShape(QFrame.HLine)
     line.setFixedHeight(1)
-    line.setStyleSheet("background-color: #27272A; border: none;")
+    line.setObjectName("settingsDivider")
     return line
 
 
@@ -46,21 +46,30 @@ class SettingsPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("settingsPanel")
-        self.setFixedWidth(280)
+        self.setMinimumWidth(250)
 
         self._build_ui()
         self._connect_signals()
         self._sync_ui_to_state()
 
     def _build_ui(self):
+        from ui.project_settings_dialog import ProjectSettingsDialog
+        self.ProjectSettingsDialog = ProjectSettingsDialog
+        
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(12)
 
+        top_btns = QHBoxLayout()
+        self.btn_proj_settings = QPushButton("⚙️ Settings")
+        self.btn_proj_settings.setCursor(Qt.PointingHandCursor)
         self.btn_export = QPushButton("Export Video")
         self.btn_export.setObjectName("exportButton")
         self.btn_export.setCursor(Qt.PointingHandCursor)
-        layout.addWidget(self.btn_export)
+        
+        top_btns.addWidget(self.btn_proj_settings)
+        top_btns.addWidget(self.btn_export, stretch=1)
+        layout.addLayout(top_btns)
 
         layout.addWidget(_divider())
 
@@ -120,6 +129,7 @@ class SettingsPanel(QWidget):
         layout.addWidget(self.scroll_area, stretch=1)
 
     def _connect_signals(self):
+        self.btn_proj_settings.clicked.connect(self._on_proj_settings_clicked)
         self.btn_export.clicked.connect(self._on_export_clicked)
         self.chk_blur.stateChanged.connect(self._on_blur_changed)
         self.slider_intensity.valueChanged.connect(self._on_blur_changed)
@@ -128,6 +138,10 @@ class SettingsPanel(QWidget):
         )
         self.btn_add_text.clicked.connect(self._on_add_text_clicked)
         active_project.textLayersChanged.connect(self._update_text_layers_ui)
+
+    def _on_proj_settings_clicked(self):
+        dialog = self.ProjectSettingsDialog(self)
+        dialog.exec()
 
     def _sync_ui_to_state(self):
         self.chk_blur.setChecked(active_project.blur_background)
@@ -158,10 +172,7 @@ class SettingsPanel(QWidget):
 
         for i, layer in enumerate(active_project.text_layers):
             card = QFrame()
-            card.setStyleSheet(
-                "QFrame { background-color: #1E1E22; border: 1px solid #27272A;"
-                "border-radius: 8px; }"
-            )
+            card.setObjectName("textLayerCard")
             card_layout = QHBoxLayout(card)
             card_layout.setContentsMargins(10, 8, 8, 8)
             card_layout.setSpacing(8)
